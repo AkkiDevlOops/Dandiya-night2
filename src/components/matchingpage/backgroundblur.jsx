@@ -23,7 +23,7 @@ export default function SlideshowDiv() {
       {images.map((img, index) => (
         <div
           key={index}
-          className={`absolute inset-0 transition-opacity  duration-700 ease-in-out ${
+          className={`absolute inset-0 min-h-screen transition-opacity  duration-700 ease-in-out ${
             index === currentIndex ? "opacity-100 z-10" : "opacity-0 z-0"
           }`}
         >

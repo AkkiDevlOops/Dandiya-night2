@@ -68,7 +68,7 @@ export default function CompleteProfilePage() {
 
   return (
     <>
-    <div className="flex min-h-screen justify-center items-center">
+    <div className="flex min-h-screen  justify-center items-center">
       <Background/>
       <ProfileFormFirst/></div>
     

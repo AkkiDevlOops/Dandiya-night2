@@ -185,7 +185,7 @@ const router = useRouter();
         ):('')}
     
 
-      <div className="rounded-[1.7rem]  border border-[#741337]/10 bg-white p-5 shadow-xl shadow-[#741337]/5 sm:p-6">
+      <div className="rounded-[1.7rem] md:mb-10 mb-20  border border-[#741337]/10 bg-white p-5 shadow-xl shadow-[#741337]/5 sm:p-6">
 
         {/* VERIFIED STUDENT */}
 
