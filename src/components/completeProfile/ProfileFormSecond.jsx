@@ -140,7 +140,7 @@ export default function ProfileFormSecond({
       
 
   return (
-    <div className="h-[95vh] rounded-2xl overflow-y-auto [&::-webkit-scrollbar]:hidden md:w-1/2">
+    <div className="h-[95vh] mb-50 md:mb-0 rounded-2xl overflow-y-auto [&::-webkit-scrollbar]:hidden md:w-1/2">
 
       
 
@@ -148,7 +148,7 @@ export default function ProfileFormSecond({
 
       {/* ================= CARD ================= */}
 
-      <div className="rounded-[1.7rem] border border-[#741337]/10 bg-white p-5 shadow-xl shadow-[#741337]/5 sm:p-6">
+      <div className="rounded-[1.7rem] border  border-[#741337]/10 bg-white p-5 shadow-xl shadow-[#741337]/5 sm:p-6">
 
         {/* ================= USER ================= */}
 

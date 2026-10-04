@@ -21,7 +21,7 @@ export async function POST(request) {
     
      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(tokenCookie, secret);
-   
+  
     await connectDB();
 
    
@@ -35,7 +35,9 @@ export async function POST(request) {
       email: email,
     })
 
-    const userToken = user.tokenDetails
+    
+
+    const userToken = await user.tokenDetails
 
     
 
@@ -81,7 +83,7 @@ export async function POST(request) {
   
      const newProfile = new Profile({
       
-      username: username.trim(),
+      username: username.trim() ,
       branch: branch,
       intrest: [],
       height:'',
@@ -90,7 +92,7 @@ export async function POST(request) {
       semester:semester,
       college: college,
       gender:gender,
-      email: email.trim(),
+      email: email.trim().toLowerCase(),
     });
     await newProfile.save();
 

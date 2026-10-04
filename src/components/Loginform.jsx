@@ -17,6 +17,7 @@ import {
 import { useRouter } from "next/navigation";
 
 import { useAuth } from "@/lib/gettoken";
+import { Amiri_Quran } from "next/font/google";
 // import { useAuthGuard } from "@/lib/authorisedroute";
 
 export default function LoginForm() {
@@ -37,7 +38,7 @@ export default function LoginForm() {
      const [showPassword, setShowPassword] = useState('');
      const [error,setError] = useState('');
     
-  
+  const [isDisabled,setisDisabled] = useState(false);
   const [email, setEmail] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [showMobileField, setShowMobileField] = useState(false);
@@ -57,6 +58,7 @@ export default function LoginForm() {
   const handlesubmit= async (e) => {
     e.preventDefault();
     setLoadinglog(true);
+    setisDisabled(true);
     setError("");
     setSuccessMsg("");
     console.log(identifier) 
@@ -68,6 +70,7 @@ export default function LoginForm() {
       });
 
       const data = await res.json();
+              
       console.log(data);
       if (!res.ok) throw new Error(data.error || "Request failed");
 
@@ -79,6 +82,9 @@ export default function LoginForm() {
       setError(err.message);
     } finally {
       setLoadinglog(false);
+      setTimeout(() => {
+              setisDisabled(false)
+            }, 7000);
     }
   };
 
@@ -87,7 +93,7 @@ export default function LoginForm() {
     setLoading(true);
     setError("");
     setSuccessMsg("");
-
+    setisDisabled(true);
     try {
       const response = await fetch("/api/auth/verify-otp", {
   method: "POST",
@@ -107,17 +113,21 @@ console.log(data.token);
      
 
       if (data.token.isLoggedIn) {
-      router.push("/completeProfile");
+        console.log("loggedintrue")
+        if (data.token.isProfileFullyUpdated) {
+      router.push("/testroute");
+      return;
+      }
+      if (data.token.isPhotoUploaded) {
+      router.push("/intrestpage");
+      return;
       }
       if (data.token.isFirstPhaseCompleted) {
       router.push("/testimage");
+      return;
       }
-      if (isPhotoUploaded) {
-      router.push("/saveProfile");
       }
-      if (isProfileFullyUpdated) {
-      router.push("/getprofiles");
-      }
+      router.push("/completeProfile");
 
        if (!res.ok) throw new Error(data.error || "Verification failed");
 
@@ -128,6 +138,10 @@ console.log(data.token);
       setError(err.message);
     } finally {
       setLoading(false);
+   
+       setTimeout(() => {
+      setisDisabled(false)
+       }, 7000);
     }
   };
   // Main submission function to contact the backend route
@@ -169,7 +183,7 @@ console.log(data.token);
       <div className="rounded-[2rem] border border-[#741337]/10 bg-white p-6 shadow-xl shadow-[#741337]/5 sm:p-8">
 
         <form
-          onSubmit={handlesubmit}
+         onSubmit={handlesubmit}
           className="space-y-5"
         >
 
@@ -262,6 +276,7 @@ console.log(data.token);
           {/* LOGIN BUTTON */}
           <button
             type="submit"
+            disabled={isDisabled}
             
             className="group flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-[#741337] font-medium text-white shadow-lg shadow-[#741337]/15 transition hover:bg-[#5d0e2b] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -346,6 +361,8 @@ console.log(data.token);
           </div>
           <div>
            <button
+           disabled={isDisabled}
+           
             type="submit"
             className="group mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-[#741337] font-medium text-white shadow-lg shadow-[#741337]/15 transition hover:bg-[#5d0e2b] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
           >{loading?"Loading...":"Submit"}</button></div>

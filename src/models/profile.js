@@ -51,7 +51,15 @@ const UserProfile = new mongoose.Schema({
     required: true,
   },
 
-  images:[{type: String}],
+ images: {
+  type: [String],
+  default: [],
+},
+
+imageHashes: {
+  type: [String],
+  default: [],
+},
 
   createdAt: {
     type: Date,

@@ -6,6 +6,7 @@ import Profile from '@/models/profile';
 import connectDB from '@/lib/db';
 import dbToken from '@/models/tokens';
 import { userlog } from '@/models/Registration';
+import DiscoverySchema from '@/models/DiscoverySchema';
 
 export async function POST(request) {
   try {
@@ -13,8 +14,7 @@ export async function POST(request) {
     // 1. Extract and Decrypt the Session Cookie (Inline Middleware)
     const cookieStore = await cookies();
     const token = cookieStore.get('session')?.value;
-    console.log(token)
-
+    
     if (!token) {
       return NextResponse.json({ error: 'Session cookie missing. Please log in.' }, { status: 401 });
     }
@@ -24,15 +24,16 @@ export async function POST(request) {
       // 3. Verify and decode the token payload
       const { payload } = await jwtVerify(token, secret);
       const email = payload.email;
-        
+       
              const user = await userlog.findOne({
               email: email,
             })
-        
+        console.log(user);
+    
              const userToken = user.tokenDetails
     
     // Now you have access to user info (e.g., payload.userId)
-  
+   
 
     // 2. Parse and Validate the Incoming Body Data
     const body = await request.json();
@@ -76,8 +77,25 @@ export async function POST(request) {
 
     // console.log(savetoken);
 
-    userToken.isPhotoUploaded = true
+    userToken.isProfileFullyUpdated = true
     await user.save();
+
+    await DiscoverySchema.create({
+              email:
+                senderProfile.email,
+    
+              liked: [],
+    
+              skipped: [],
+    
+              blocked: [],
+    
+              reported: [],
+    
+              likedBy: [],
+    
+              matches: [],
+            });
 
     // 4. Return Success Response
     return NextResponse.json({ 

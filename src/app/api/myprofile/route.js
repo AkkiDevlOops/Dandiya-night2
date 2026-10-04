@@ -3,19 +3,32 @@ import  connectDB  from '@/lib/db.js';
 import  Profile  from '@/models/profile'; // 👈 Import your actual User/Profile model
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { jwtVerify } from 'jose';
+import { userlog } from '@/models/Registration';
 
 export async function GET() {
   try {
       const cookieStore = await cookies();
-      const tokenCookie = cookieStore.get("auth_token");
-      const sessionUser = JSON.parse(tokenCookie.value);
-      const sessionId = sessionUser.id; 
+      const token = cookieStore.get('session')?.value;
 
-      console.log(sessionId)
+      const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+           
+            // 3. Verify and decode the token payload
+            const { payload } = await jwtVerify(token, secret);
+          
+            const email = payload.email;
+            
+                   const user = await userlog.findOne({
+                    email: email,
+                  })
+                 
+                   const userToken = user.tokenDetails
+    
+     
     // 1. Ensure your app is actively connected to MongoDB
     await connectDB();
 
-    const alreadyusername = await Profile.findOne({ id: sessionId });
+    const alreadyusername = await Profile.findOne({ email: email });
     
     console.log(alreadyusername)
     

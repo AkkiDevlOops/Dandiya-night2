@@ -1,3 +1,6 @@
+
+
+
 import connectDB from "@/lib/db.js";
 import Profile from "@/models/profile";
 import { NextResponse } from "next/server";
@@ -98,19 +101,18 @@ export async function POST(request) {
      
 
     if (!authenticatedUser) {
-
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "Session cookie missing or invalid. Please log in.",
-        },
-        {
-          status: 401,
-        }
-      );
-
-    }
+  return NextResponse.json(
+    {
+      success: false,
+      redirect: true,         // Tell the frontend to redirect
+      url: '/LoginRegister',          // Where to go
+      message: "Session cookie missing or invalid. Please log in.",
+    },
+    { status: 401 }
+  );
+}
+    
+            
 
 
     const email =
@@ -283,78 +285,78 @@ export async function POST(request) {
       // Remove skip if they previously skipped this person
       // ---------------------------------------------------
 
-      await userlog.collection.updateOne(
-        {
-          _id: currentUser._id,
-        },
-        {
-          $pull: {
-            "discovery.skipped": {
-              profileId: String(profileId),
-            },
-          },
-        }
-      );
+      // await userlog.collection.updateOne(
+      //   {
+      //     _id: currentUser._id,
+      //   },
+      //   {
+      //     $pull: {
+      //       "discovery.skipped": {
+      //         profileId: String(profileId),
+      //       },
+      //     },
+      //   }
+      // );
 
 
       // ---------------------------------------------------
       // Create like object
       // ---------------------------------------------------
 
-      const likeObject = {
+      // const likeObject = {
 
-        profileId: String(profileId),
+      //   profileId: String(profileId),
 
-        targetType:
-          targetType || "profile",
+      //   targetType:
+      //     targetType || "profile",
 
-        targetId:
-          targetId
-            ? String(targetId)
-            : null,
+      //   targetId:
+      //     targetId
+      //       ? String(targetId)
+      //       : null,
 
-        comment:
-          typeof comment === "string"
-            ? comment.trim().slice(0, 500)
-            : "",
+      //   comment:
+      //     typeof comment === "string"
+      //       ? comment.trim().slice(0, 500)
+      //       : "",
 
-        createdAt: new Date(),
+      //   createdAt: new Date(),
 
-      };
+      // };
 
 
       // ---------------------------------------------------
       // Remove previous like for same profile
       // ---------------------------------------------------
 
-      await userlog.collection.updateOne(
-        {
-          _id: currentUser._id,
-        },
-        {
-          $pull: {
-            "discovery.liked": {
-              profileId: String(profileId),
-            },
-          },
-        }
-      );
+      // await userlog.collection.updateOne(
+      //   {
+      //     _id: currentUser._id,
+      //   },
+      //   {
+      //     $pull: {
+      //       "discovery.liked": {
+      //         profileId: String(profileId),
+      //       },
+      //     },
+      //   }
+      // );
 
 
       // ---------------------------------------------------
       // Add new like
       // ---------------------------------------------------
 
-      await userlog.collection.updateOne(
-        {
-          _id: currentUser._id,
-        },
-        {
-          $push: {
-            "discovery.liked": likeObject,
-          },
-        }
-      );
+      // await userlog.collection.updateOne(
+      //   {
+      //     _id: currentUser._id,
+      //   },
+      //   {
+      //     $push: {
+      //       "discovery.liked": likeObject,
+      //     },
+      //   }
+      // );
 
 
       return NextResponse.json({

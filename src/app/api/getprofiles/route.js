@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { jwtVerify } from 'jose';
 import { userlog } from '@/models/Registration';
+import { redirect } from 'next/navigation';
 
 export async function POST() {
   try {
@@ -13,8 +14,9 @@ export async function POST() {
       const token = cookieStore.get("session")?.value;
 
      
-         if (!token) {
-           return NextResponse.json({ error: 'Session cookie missing. Please log in.' }, { status: 401 });
+         if (!token) { 
+           const loginUrl = new URL('/loginRegister', request.url);
+         return NextResponse.redirect(loginUrl);
          }
      
          const secret = new TextEncoder().encode(process.env.JWT_SECRET);

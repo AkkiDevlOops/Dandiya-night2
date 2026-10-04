@@ -1,21 +1,28 @@
+
 import crypto from "crypto";
 import { NextResponse } from "next/server";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 import connectDB from "@/lib/db";
-import dbToken from "@/models/tokens";
 import { sendOtpEmail } from "@/lib/sendOtpEmail";
 import { userlog } from "@/models/Registration";
 
 export async function POST(request) {
   try {
-    // Read email from request body
-    const data = await request.json();
-    const  email  = data.identifier;
-    const number = data.number;
-    console.log(number + email);
-    
+    // ============================================
+    // 1. GET DATA
+    // ============================================
 
-    // Validate email
+    const data = await request.json();
+
+    const email = data.identifier;
+    const number = data.number;
+
+    console.log("LOGIN:", number, email);
+
+    // ============================================
+    // 2. VALIDATE EMAIL
+    // ============================================
+
     if (!email || typeof email !== "string") {
       return NextResponse.json(
         {
@@ -26,7 +33,6 @@ export async function POST(request) {
       );
     }
 
-    // Normalize email
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!normalizedEmail) {
@@ -39,130 +45,219 @@ export async function POST(request) {
       );
     }
 
-    // Connect to MongoDB
+    // ============================================
+    // 3. CONNECT DATABASE
+    // ============================================
+
     await connectDB();
 
-    // Generate 6-digit OTP
-    const otp = crypto.randomInt(100000, 1000000).toString();
+    // ============================================
+    // 4. GENERATE OTP
+    // ============================================
 
-    // OTP expires in 5 minutes
+    const otp = crypto
+      .randomInt(100000, 1000000)
+      .toString();
+
     const otpExpiresAt = new Date(
       Date.now() + 5 * 60 * 1000
     );
 
-    console.log("EMAIL VALUE:", normalizedEmail);
-    console.log("OTP GENERATED:", otp);
+    console.log("EMAIL:", normalizedEmail);
+    console.log("OTP:", otp);
 
-    const payload = {
-  email: normalizedEmail,
-};
+    // ============================================
+    // 5. FIND EXISTING USER
+    // ============================================
 
-const sessionToken = jwt.sign(
-  payload, 
-  process.env.JWT_SECRET, 
-  { expiresIn: '11d' } // 🚀 Valid for exactly 11 days
-);
-
-    /*
-     * --------------------------------------------------
-     * SAVE OTP TO MONGODB
-     * --------------------------------------------------
-     *
-     * You need to associate this OTP with the correct
-     * registration/token document.
-     *
-     * For now this section is commented because I don't
-     * yet know how your Registration document is linked
-     * to the user's email/currentToken.
-     */
-
-    // Example:
-    //
-    const alreadyemail = await userlog.findOne({
-        $or: [
-    { email: normalizedEmail },
-    { mobileNumber: number }
-  ]
+    const existingUser = await userlog.findOne({
+      $or: [
+        { email: normalizedEmail },
+        { mobileNumber: number },
+      ],
     });
 
-    
-    if(!alreadyemail){
-       await connectDB();
+    // ============================================
+    // 6. USER DOES NOT EXIST
+    // ============================================
 
-  const newUser = new userlog({
-    email: normalizedEmail,
-    mobileNumber: number,
-     tokenDetails: {
-      currentToken: sessionToken,
-      isFirstPhaseCompleted: false,
-      isPhotoUploaded: false,
-      isProfileFullyUpdated: false,
-      isLoggedIn: false,
-      tempOtp: otp,
-      otpExpiresAt: otpExpiresAt,
+    if (!existingUser) {
+      console.log("NEW USER");
+
+      // Generate token ONLY for new user
+      const sessionToken = jwt.sign(
+        {
+          email: normalizedEmail,
+        },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "11d",
+        }
+      );
+
+      // Create new user
+      const newUser = new userlog({
+        email: normalizedEmail,
+
+        mobileNumber: number,
+
+        tokenDetails: {
+          currentToken: sessionToken,
+
+          isFirstPhaseCompleted: false,
+
+          isPhotoUploaded: false,
+
+          isProfileFullyUpdated: false,
+
+          isLoggedIn: false,
+
+          tempOtp: otp,
+
+          otpExpiresAt: otpExpiresAt,
+        },
+      });
+
+      await newUser.save();
+
+      console.log("NEW USER CREATED");
+
+      // Send OTP
+      await sendOtpEmail(
+        normalizedEmail,
+        otp
+      );
+
+      // Create response
+      const response = NextResponse.json({
+        success: true,
+
+        message: "OTP sent successfully",
+
+        isNewUser: true,
+      });
+
+      // ==========================================
+      // SET TOKEN COOKIE
+      // ==========================================
+
+      response.cookies.set(
+        "session",
+        sessionToken,
+        {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          maxAge: 11 * 24 * 60 * 60,
+          path: "/",
+        }
+      );
+
+      return response;
     }
-  });
 
-  // Saving the parent document inserts everything into MongoDB automatically
-  const savedUser = await newUser.save();
-  console.log(savedUser);
+    // ============================================
+    // 7. EXISTING USER
+    // ============================================
 
-   await sendOtpEmail(normalizedEmail, otp);
+    console.log("EXISTING USER");
 
-    console.log("OTP EMAIL SENT:", normalizedEmail);
+    let sessionToken =
+      existingUser.tokenDetails?.currentToken;
 
-    return NextResponse.json({
-      success: true,
-      message: "OTP sent successfully",
-    });
+    // ============================================
+    // 8. IF EXISTING USER HAS NO TOKEN
+    // ============================================
+
+    if (!sessionToken) {
+      console.log(
+        "Existing user has no token. Creating one..."
+      );
+
+      sessionToken = jwt.sign(
+        {
+          email: normalizedEmail,
+        },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "11d",
+        }
+      );
+
+      existingUser.tokenDetails.currentToken =
+        sessionToken;
     }
-    
-    // if (!tokenDoc) {
-    //   return NextResponse.json(
-    //     {
-    //       success: false,
-    //       message: "User/token not found",
-    //     },
-    //     { status: 404 }
-    //   );
-    // }
-    //
-   
-    /*
-     * --------------------------------------------------
-     * SEND OTP EMAIL
-     * --------------------------------------------------
-     */
-    const fetchedToken = alreadyemail.tokenDetails;
 
-console.log("OLD TOKEN DETAILS:", fetchedToken);
+    // ============================================
+    // 9. UPDATE OTP
+    // ============================================
 
-    
-      alreadyemail.tokenDetails.tempOtp = otp;
-      alreadyemail.tokenDetails.otpExpiresAt = otpExpiresAt;
-      alreadyemail.tokenDetails.updatedAt = new Date();
+    existingUser.tokenDetails.tempOtp = otp;
 
-      alreadyemail.markModified("tokenDetails");
+    existingUser.tokenDetails.otpExpiresAt =
+      otpExpiresAt;
 
-  // 3. Save the changes permanently back to MongoDB
-  await alreadyemail.save();
+    existingUser.tokenDetails.updatedAt =
+      new Date();
 
-    await sendOtpEmail(normalizedEmail, otp);
+    existingUser.markModified("tokenDetails");
 
-    console.log("OTP EMAIL SENT:", normalizedEmail);
+    await existingUser.save();
 
-    const response =  NextResponse.json({
+    console.log(
+      "USING TOKEN:",
+      sessionToken
+    );
+
+    // ============================================
+    // 10. SEND OTP
+    // ============================================
+
+    await sendOtpEmail(
+      normalizedEmail,
+      otp
+    );
+
+    console.log(
+      "OTP EMAIL SENT:",
+      normalizedEmail
+    );
+
+    // ============================================
+    // 11. CREATE RESPONSE
+    // ============================================
+
+    const response = NextResponse.json({
       success: true,
+
       message: "OTP sent successfully",
+
+      isNewUser: false,
     });
 
-   
+    // ============================================
+    // 12. SET EXISTING TOKEN IN COOKIE
+    // ============================================
 
-  return response;
+    response.cookies.set(
+      "session",
+      sessionToken,
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 11 * 24 * 60 * 60,
+        path: "/",
+      }
+    );
 
-    
+    return response;
+
   } catch (error) {
-    console.error("SEND OTP ERROR:", error);
+    console.error(
+      "SEND OTP ERROR:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -174,116 +269,181 @@ console.log("OLD TOKEN DETAILS:", fetchedToken);
   }
 }
 
-// // app/api/auth/login/route.js
-// import { NextResponse } from 'next/server';
-// import connectDB from '@/lib/db';
-// import User from '@/models/user';
-// import bcrypt from 'bcryptjs';
+
+
+
+// import crypto from "crypto";
+// import { NextResponse } from "next/server";
 // import jwt from 'jsonwebtoken';
-// import dbToken from '../../../../models/tokens.js';
-
-
+// import connectDB from "@/lib/db";
+// import dbToken from "@/models/tokens";
+// import { sendOtpEmail } from "@/lib/sendOtpEmail";
+// import { userlog } from "@/models/Registration";
 
 // export async function POST(request) {
-
-
-
 //   try {
-//     await connectDB();
+//     // Read email from request body
 //     const data = await request.json();
-//     const { enrollmentNo, password,email } = data.current;
-//     console.log(enrollmentNo,password,email);
-   
-
+//     const  email  = data.identifier;
+//     const number = data.number;
+//     console.log(number + email);
     
 
-//     if (!enrollmentNo || !password) {
-//       return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
-//     }
-//     console.log("enrollmentNo check kia");
-
-//     // 1. Find user and verify password
-//     const user = await User.findOne({ enrollmentNo: enrollmentNo });
-//       console.log("user check kia");
-//     if (!user) {
-//       console.log("user check kr liya")
-//       return NextResponse.json({ error: 'Invalid credentials, User not found in database' }, { status: 401 });
-      
+//     // Validate email
+//     if (!email || typeof email !== "string") {
+//       return NextResponse.json(
+//         {
+//           success: false,
+//           message: "Email is required",
+//         },
+//         { status: 400 }
+//       );
 //     }
 
-   
-//     console.log("password pr aaya ");
-//     const isPasswordMatch = await bcrypt.compare(password, user.password);
-//     if (!isPasswordMatch) {
-//       return NextResponse.json({ error: 'password not correct' }, { status: 401 });
+//     // Normalize email
+//     const normalizedEmail = email.trim().toLowerCase();
+
+//     if (!normalizedEmail) {
+//       return NextResponse.json(
+//         {
+//           success: false,
+//           message: "Email is required",
+//         },
+//         { status: 400 }
+//       );
 //     }
-//     console.log("password check kia");
 
-//     console.log(user);
+//     // Connect to MongoDB
+//     await connectDB();
 
-//     const checktoken = await dbToken.findOne({
-//            useId : user._id
-//         });
+//     // Generate 6-digit OTP
+//     const otp = crypto.randomInt(100000, 1000000).toString();
 
-//         console.log(checktoken);
-
-        
-//               const token2 = jwt.sign(
-//                   { userId: user._id ,
-//                   name : user.name,
-//                   insertedData1:true} ,// Data encoded inside the token
-//                   process.env.JWT_SECRET,                  // Secret key
-//                   { expiresIn: '11d' }                      // Token lifespan (e.g., 7 days)
-//                 );
-        
-            
-        
-
-
-//     // 2. Generate the JWT Token payload
-//     const token = jwt.sign(
-//       { userId: user._id ,
-//       name : user.name,
-//       loggedIn:true} ,// Data encoded inside the token
-//       process.env.JWT_SECRET,                  // Secret key
-//       { expiresIn: '11d' }                      // Token lifespan (e.g., 7 days)
+//     // OTP expires in 5 minutes
+//     const otpExpiresAt = new Date(
+//       Date.now() + 5 * 60 * 1000
 //     );
 
-    
+//     console.log("EMAIL VALUE:", normalizedEmail);
+//     console.log("OTP GENERATED:", otp);
 
-   
-//     // 3. Create the response object
-//     const response = NextResponse.json(
-//       { message: 'Login successful', user: { id: user._id, name: user.name , profilecompleted: checktoken?.setUpprofile } },
-//       { status: 200 },
-//     );
+//     const payload = {
+//   email: normalizedEmail,
+// };
 
-//     // 4. Securely set the JWT inside an HttpOnly Cookie
-//     response.cookies.set({
-//       name: 'auth_token',
-//       value:token, // Store user info + token
-//       httpOnly: true,                         // Prevents frontend JavaScript from stealing the token
-//       secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
-//       sameSite: 'strict',                     // Protection against CSRF attacks
-//       maxAge: 60 * 60 * 24 * 11,               // 7 days in seconds
-//       path: '/',
+// const sessionToken = jwt.sign(
+//   payload, 
+//   process.env.JWT_SECRET, 
+//   { expiresIn: '11d' } // 🚀 Valid for exactly 11 days
+// );
+
+//     /*
+//      * --------------------------------------------------
+//      * SAVE OTP TO MONGODB
+//      * --------------------------------------------------
+//      *
+//      * You need to associate this OTP with the correct
+//      * registration/token document.
+//      *
+//      * For now this section is commented because I don't
+//      * yet know how your Registration document is linked
+//      * to the user's email/currentToken.
+//      */
+
+//     // Example:
+//     //
+//     const alreadyemail = await userlog.findOne({
+//         $or: [
+//     { email: normalizedEmail },
+//     { mobileNumber: number }
+//   ]
 //     });
 
-//      response.cookies.set({
-//               name: 'profile3token',
-//               value:token2, // Store user info + token
-//               httpOnly: true,                         // Prevents frontend JavaScript from stealing the token
-//               secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
-//               sameSite: 'strict',                     // Protection against CSRF attacks
-//               maxAge: 60 * 60 * 24 * 11,               // 7 days in seconds
-//               path: '/',
-//             });
+    
+//     if(!alreadyemail){
+//        await connectDB();
 
+//   const newUser = new userlog({
+//     email: normalizedEmail,
+//     mobileNumber: number,
+//      tokenDetails: {
+//       currentToken: sessionToken,
+//       isFirstPhaseCompleted: false,
+//       isPhotoUploaded: false,
+//       isProfileFullyUpdated: false,
+//       isLoggedIn: false,
+//       tempOtp: otp,
+//       otpExpiresAt: otpExpiresAt,
+//     }
+//   });
 
-//     return response;
+//   // Saving the parent document inserts everything into MongoDB automatically
+//   const savedUser = await newUser.save();
+//   console.log(savedUser);
 
+//    await sendOtpEmail(normalizedEmail, otp);
+
+//     console.log("OTP EMAIL SENT:", normalizedEmail);
+
+//     return NextResponse.json({
+//       success: true,
+//       message: "OTP sent successfully",
+//     });
+//     }
+    
+//     // if (!tokenDoc) {
+//     //   return NextResponse.json(
+//     //     {
+//     //       success: false,
+//     //       message: "User/token not found",
+//     //     },
+//     //     { status: 404 }
+//     //   );
+//     // }
+//     //
+   
+//     /*
+//      * --------------------------------------------------
+//      * SEND OTP EMAIL
+//      * --------------------------------------------------
+//      */
+//     const fetchedToken = alreadyemail.tokenDetails;
+
+// console.log("OLD TOKEN DETAILS:", fetchedToken);
+
+    
+//       alreadyemail.tokenDetails.tempOtp = otp;
+//       alreadyemail.tokenDetails.otpExpiresAt = otpExpiresAt;
+//       alreadyemail.tokenDetails.updatedAt = new Date();
+
+//       alreadyemail.markModified("tokenDetails");
+
+//   // 3. Save the changes permanently back to MongoDB
+//   await alreadyemail.save();
+
+//     await sendOtpEmail(normalizedEmail, otp);
+
+//     console.log("OTP EMAIL SENT:", normalizedEmail);
+
+//     const response =  NextResponse.json({
+//       success: true,
+//       message: "OTP sent successfully",
+//     });
+
+   
+
+//   return response;
+
+    
 //   } catch (error) {
-//     console.error('Login Error:', error);
-//     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+//     console.error("SEND OTP ERROR:", error);
+
+//     return NextResponse.json(
+//       {
+//         success: false,
+//         message: "Failed to send OTP",
+//       },
+//       { status: 500 }
+//     );
 //   }
-// };
+// }
