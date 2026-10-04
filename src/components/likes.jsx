@@ -255,7 +255,7 @@ const matchWithUser = async () => {
               />
 
               <span className="text-xs ml-2 font-bold text-[#4a1525]">
-                {likes.length} Likes
+                {matches.length} Likes
               </span>
 
             </div>
@@ -381,7 +381,7 @@ const matchWithUser = async () => {
 
               <Image
                 src={
-                  match.image ||
+                  match.images[0] ||
                   "/default-avatar.png"
                 }
                 alt={

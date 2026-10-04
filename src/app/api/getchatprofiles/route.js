@@ -52,22 +52,22 @@ export async function GET() {
    email: email.toLowerCase(),
 
    })
-  .select("matches")// 🌟 This tells MongoDB to ONLY return the likedBy field
+  .select("likedBy liked matches")// 🌟 This tells MongoDB to ONLY return the likedBy field
   .lean();
 
-    const matches = (discovery.matches || [])
-  .filter(
-    (match) => match.acknowledge === true // ✅ Real boolean check (no quotes)
-  )
+ const matches = (discovery.matches || [])
   .map((match) => ({
-    profileId: match.profileId?._id || match.profileId, // Handles populated object ID safely
-    email: match.profileId?.email || match.email,              // ✅ Safely reads email from populated Profile
-    username: match.username,                       // ✅ Matches schema perfectly
-    image: match.images[0],                         // ✅ Matches schema perfectly
-    status: match.acknowledge ? "Connected" : "Pending" // ✅ Fallback since status isn't in schema
+    profileId: match.profileId?._id || match.profileId,
+    email: match.profileId?.email || match.email,
+    username: match.username,
+    images: match.images || [],
+    matchedAt: match.matchedAt,
+    status: match.status || "active",
   }));
 
 
+     
+    
       
      
 // const array1 = (discovery?.liked || [])
@@ -99,7 +99,7 @@ export async function GET() {
   
 
 
-return NextResponse.json(discovery)
+
 
     if (!discovery) {
       return NextResponse.json(

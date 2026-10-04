@@ -81,8 +81,7 @@ export async function POST(request) {
     await user.save();
 
     await DiscoverySchema.create({
-              email:
-                senderProfile.email,
+              email:email,
     
               liked: [],
     
