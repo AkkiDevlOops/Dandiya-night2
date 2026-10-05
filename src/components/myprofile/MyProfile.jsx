@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-
+import Navbar from '@/components/Navbar'
+import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 /* =========================================================
    INTERESTS
 ========================================================= */
@@ -179,7 +181,7 @@ export default function MyProfilePage() {
     useState(null);
 
   const fileInputRef = useRef(null);
-
+  const router = useRouter();
   /* =======================================================
      GET PROFILE
   ======================================================= */
@@ -719,7 +721,7 @@ export default function MyProfilePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#fffaf2] flex items-center justify-center">
+      <main className="min-h-screen inset-0 z-60 fixed bg-[#fffaf2] flex items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-[#741337]/20 border-t-[#741337]" />
 
@@ -737,12 +739,13 @@ export default function MyProfilePage() {
 // text-[#741337]
   return (
     <main className="min-h-screen inset-0 z-50 fixed overflow-y-auto  [&::-webkit-scrollbar]:hidden px-4 py-8 text-white sm:px-6 lg:px-8">
+      
       <div className="mx-auto max-w-2xl">
 
         {/* =================================================
             HEADER
         ================================================= */}
-
+        
         <div className="mb-8">
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.25em] text-red-400">
             Your profile
@@ -764,7 +767,7 @@ export default function MyProfilePage() {
         ================================================= */}
 
         {error && (
-          <div className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+          <div className="mb-5 rounded-2xl  border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
             {error}
           </div>
         )}
@@ -784,7 +787,7 @@ export default function MyProfilePage() {
         ================================================= */}
 
         <section className="rounded-[28px] border border-[#741337]/8 bg-white text-[#741337] p-5 shadow-[0_10px_40px_rgba(116,19,55,0.06)] sm:p-7">
-
+          <div className="flex "><div><button onClick={()=>router.push("/testroute")}><ArrowLeft/></button></div><div className="mx-2"><h1><a href="/testroute">Get Back to explore Page</a></h1></div></div>
           {/* ===============================================
               PHOTOS
           =============================================== */}

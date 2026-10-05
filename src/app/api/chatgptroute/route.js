@@ -1,4 +1,4 @@
-
+// Discovery route and Intrest Page
 
 
 import connectDB from "@/lib/db.js";

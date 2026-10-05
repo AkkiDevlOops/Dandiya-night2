@@ -8,6 +8,7 @@ import { userlog } from '@/models/Registration';
 
 export async function GET() {
   try {
+     await connectDB();
       const cookieStore = await cookies();
       const token = cookieStore.get('session')?.value;
 
@@ -26,12 +27,12 @@ export async function GET() {
     
      
     // 1. Ensure your app is actively connected to MongoDB
-    await connectDB();
+    
 
     const alreadyusername = await Profile.findOne({ email: email });
     
     console.log(alreadyusername)
-    
+   
 
     // 3. Return the array list to the frontend
     return NextResponse.json({
